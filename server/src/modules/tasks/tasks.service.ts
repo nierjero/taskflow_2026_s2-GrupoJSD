@@ -62,6 +62,7 @@ export async function createTask(projectId: number, userId: number, body: Record
 
   const task = await db.task.create({
     data: {
+      //Querie a la base de datos mal parametrizada, devilidad a posible SQL Injection
       ...(body as object),
       projectId,
       title,
