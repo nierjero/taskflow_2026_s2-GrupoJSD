@@ -2,6 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { unauthorized } from '../lib/http';
 
+/*
+
+  La clave JWT_SECRET esta hardcodeada en el código fuente, lo cual no es seguro para un entorno de producción.
+
+*/
 export const JWT_SECRET = process.env.JWT_SECRET ?? 'taskflow-dev-secret';
 
 export interface TokenPayload {
