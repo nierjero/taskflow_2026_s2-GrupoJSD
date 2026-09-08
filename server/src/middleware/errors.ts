@@ -21,6 +21,8 @@ export function errorHandler(
   }
 
   // eslint-disable-next-line no-console
+
+  //Posible vulnerabilidad con respecto a la exposicion de datos sensibles al mostrar errores crudos a los usuarios.
   console.error(err);
   res.status(500).json({
     error: { code: 'INTERNAL', message: 'Unexpected server error', details: [] },
