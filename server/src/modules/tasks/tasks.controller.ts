@@ -80,7 +80,7 @@ export async function update(req: Request, res: Response, next: NextFunction): P
     next(err);
   }
 }
-
+// A la hora de eliminar la tarea, solo verifica que exista, asi que cualquier usuario autenticado puede eliminar todo tipo de tareas
 export async function remove(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const taskId = parsePublicId(req.params.taskId, 'task');
