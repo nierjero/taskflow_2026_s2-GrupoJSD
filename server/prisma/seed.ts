@@ -14,6 +14,7 @@ async function main() {
   await db.passwordResetToken.deleteMany();
   await db.user.deleteMany();
 
+  // Contraseña del hash hardcodeada dentro del codigo fuente, violacion de seguridad grave
   const passwordHash = await bcrypt.hash('Password1', 10);
 
   const ana = await db.user.create({
