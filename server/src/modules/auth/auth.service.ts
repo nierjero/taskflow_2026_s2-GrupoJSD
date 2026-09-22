@@ -115,16 +115,24 @@ export async function resetPassword(body: Record<string, unknown>) {
   const newPassword = assertPassword(body.newPassword);
 
   const record = await db.passwordResetToken.findUnique({ where: { token } });
-  if (!record) throw badRequest('Invalid or expired reset token');
+  if (!record || record.usedAt || record.expiresAt.getTime() < Date.now()) {
+    throw badRequest('Invalid or expired reset token');
+  }
 
-  await db.user.update({
-    where: { id: record.userId },
-    data: {
-      passwordHash: await bcrypt.hash(newPassword, 10),
-      failedAttempts: 0,
-      lockedUntil: null,
-    },
-  });
+  await db.$transaction([
+    db.user.update({
+      where: { id: record.userId },
+      data: {
+        passwordHash: await bcrypt.hash(newPassword, 10),
+        failedAttempts: 0,
+        lockedUntil: null,
+      },
+    }),
+    db.passwordResetToken.update({
+      where: { token },
+      data: { usedAt: new Date() },
+    }),
+  ]);
 
   return { message: 'Password updated' };
 }
