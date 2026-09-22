@@ -12,9 +12,9 @@ TaskFlow tiene una API y una interfaz web. Probar todo desde la interfaz sería 
 
 Se organizará el testing en capas:
 
-- **API:** pruebas de endpoints y lógica del backend.
-- **E2E:** pruebas de los flujos principales desde la interfaz.
-- **Fixtures:** preparación reutilizable de datos y estado.
+- API: pruebas de endpoints y lógica del backend.
+- E2E: pruebas de los flujos principales desde la interfaz.
+- Fixtures: preparación reutilizable de datos y estado.
 
 ## Consecuencias
 
