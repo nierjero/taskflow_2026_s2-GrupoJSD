@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { app } from './helpers';
 
+//
 describe('Auth', () => {
   it('registra un usuario nuevo', async () => {
     const res = await request(app)
