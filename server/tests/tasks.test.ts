@@ -1,8 +1,9 @@
+import { test, expect } from '@playwright/test';
 import request from 'supertest';
 import { app, auth, createProject, registerUser } from './helpers';
 
-describe('Tareas', () => {
-  it('crea una tarea en un proyecto', async () => {
+test.describe('Tareas', () => {
+  test('crea una tarea en un proyecto', async () => {
     const { token } = await registerUser('task1@test.com');
     const project = await createProject(token, 'Proyecto de tareas');
 
