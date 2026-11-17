@@ -1,0 +1,57 @@
+﻿ETAPA 2 - EVALUACION DE TESTS GENERADOS CON IA
+Historia: US-16 - Fecha de vencimiento de tarea
+Herramienta: ChatGPT
+Archivo evaluado: server/tests/dueDate.test.ts
+
+RESULTADO DE EJECUCION:
+Total de tests: 8
+Aprobados: 2
+Fallidos: 6
+
+EVALUACION POR CRITERIO:
+
+Criterio 1:
+Resultado: Fallido.
+Clasificacion: Defecto real de implementacion.
+Observacion: La fecha enviada fue 2030-04-17 y la API devolvio 2030-04-16.
+
+Criterio 2:
+Resultado: Fallido.
+Clasificacion: Defecto real de implementacion.
+Observacion: La API devolvio una fecha distinta a la enviada, aunque conserva el formato YYYY-MM-DD.
+
+Criterio 3:
+Resultado: Fallido.
+Clasificacion: Defecto real de implementacion.
+Observacion: Al consultar la tarea se obtuvo 2031-01-14 en lugar de 2031-01-15.
+
+Criterio 4:
+Resultado: Aprobado.
+Clasificacion: Verde y correcto.
+Observacion: Se pudo crear una tarea sin fecha y la respuesta devolvio null.
+
+Criterio 5:
+Resultado: Aprobado.
+Clasificacion: Verde y correcto.
+Observacion: Se pudo eliminar la fecha enviando dueDate: null.
+
+Criterio 6:
+Resultado: HTTP 400, pero falló una asercion adicional.
+Clasificacion: Test por revisar.
+Observacion: El test esperaba el campo mensaje, pero la respuesta no lo contenia. El criterio de estado HTTP 400 sí se cumple.
+
+Criterio 7:
+Resultado: Fallido.
+Clasificacion: Defecto real de implementacion.
+Observacion: La fecha pasada fue aceptada, pero se devolvio un dia anterior al enviado.
+
+Criterio 8:
+Resultado: Fallido.
+Clasificacion: Defecto real de autorizacion.
+Observacion: Un usuario externo pudo modificar la fecha. La API devolvio HTTP 200 en lugar de HTTP 403.
+
+CONCLUSION:
+Los tests detectaron problemas reales de manejo de fechas y autorizacion.
+Los criterios 4 y 5 se verificaron correctamente.
+El criterio 6 requiere corregir la asercion del mensaje o comprobar el formato real del error.
+No se deben eliminar los tests que detectan defectos reales.
