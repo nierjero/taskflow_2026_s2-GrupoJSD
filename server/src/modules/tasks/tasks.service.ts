@@ -80,6 +80,77 @@ export async function createTask(projectId: number, userId: number, body: Record
   return serializeTask(task);
 }
 
+/** El nuevo asignado: null lo quita; si no, debe ser un miembro del proyecto. */
+async function resolveAssignee(value: unknown, projectId: number): Promise<number | null> {
+  if (value === null) return null;
+
+  const userId = parsePublicId(value, 'user');
+  if (userId === null) throw badRequest('assigneeId must be a valid user id');
+  if (!(await isMember(userId, projectId))) {
+    throw badRequest('The assignee must be a member of the project');
+  }
+  return userId;
+}
+
+function resolveDueDate(value: unknown): Date | null {
+  const parsed = parseDueDate(value);
+  if (parsed === undefined) {
+    throw badRequest('dueDate must be a calendar date in YYYY-MM-DD format');
+  }
+  return parsed;
+}
+
+/** Cambiar el estado lo puede hacer el asignado o un OWNER/ADMIN del proyecto. */
+async function canChangeStatus(task: TaskRow, userId: number): Promise<boolean> {
+  if (task.assigneeId === userId) return true;
+
+  const membership = await db.projectMember.findUnique({
+    where: { projectId_userId: { projectId: task.projectId, userId } },
+  });
+  return membership !== null && (membership.role === 'OWNER' || membership.role === 'ADMIN');
+}
+
+/** Devuelve el estado al que pasa la tarea, o null si el pedido no lo cambia. */
+async function resolveStatusChange(
+  task: TaskRow,
+  userId: number,
+  rawStatus: unknown,
+): Promise<Status | null> {
+  const requested = assertStatus(rawStatus);
+  if (requested === task.status) return null;
+
+  if (!(await canChangeStatus(task, userId))) {
+    throw forbidden('Only the assignee or a project admin can change the status');
+  }
+  assertTransition(task.status as Status, requested);
+  return requested;
+}
+
+/**
+ * Valida los campos recibidos y arma los cambios a aplicar. El orden de las
+ * validaciones es parte del contrato: determina qué error recibe el cliente
+ * cuando hay varios campos inválidos a la vez.
+ */
+async function collectChanges(task: TaskRow, userId: number, body: Record<string, unknown>) {
+  const data: Record<string, unknown> = {};
+
+  if (body.title !== undefined) data.title = assertString(body.title, 'title', 3, 200);
+  if (body.description !== undefined) {
+    data.description = assertOptionalString(body.description, 'description', 500) ?? null;
+  }
+  if (body.priority !== undefined) data.priority = assertPriority(body.priority);
+  if (body.dueDate !== undefined) data.dueDate = resolveDueDate(body.dueDate);
+  if (body.assigneeId !== undefined) {
+    data.assigneeId = await resolveAssignee(body.assigneeId, task.projectId);
+  }
+
+  const nextStatus =
+    body.status === undefined ? null : await resolveStatusChange(task, userId, body.status);
+  if (nextStatus !== null) data.status = nextStatus;
+
+  return { data, nextStatus };
+}
+
 /**
  * Actualiza una tarea: valida los campos recibidos, aplica las reglas de
  * autorización, resuelve la transición de estado, escribe el historial y
@@ -89,75 +160,7 @@ export async function updateTask(taskId: number, userId: number, body: Record<st
   const task = await db.task.findUnique({ where: { id: taskId } });
   if (!task) throw notFound('Task not found');
 
-  const data: Record<string, unknown> = {};
-  let nextStatus: Status | null = null;
-
-  if (body.title !== undefined) {
-    data.title = assertString(body.title, 'title', 3, 200);
-  }
-
-  if (body.description !== undefined) {
-    const description = assertOptionalString(body.description, 'description', 500);
-    data.description = description ?? null;
-  }
-
-  if (body.priority !== undefined) {
-    data.priority = assertPriority(body.priority);
-  }
-
-  if (body.dueDate !== undefined) {
-    const parsed = parseDueDate(body.dueDate);
-    if (parsed === undefined) {
-      throw badRequest('dueDate must be a calendar date in YYYY-MM-DD format');
-    }
-    data.dueDate = parsed;
-  }
-
-  if (body.assigneeId !== undefined) {
-    if (body.assigneeId === null) {
-      data.assigneeId = null;
-    } else {
-      const parsed = parsePublicId(body.assigneeId, 'user');
-      if (parsed === null) {
-        throw badRequest('assigneeId must be a valid user id');
-      } else {
-        const memberOfProject = await isMember(parsed, task.projectId);
-        if (!memberOfProject) {
-          throw badRequest('The assignee must be a member of the project');
-        } else {
-          data.assigneeId = parsed;
-        }
-      }
-    }
-  }
-
-  if (body.status !== undefined) {
-    const requested = assertStatus(body.status);
-    if (requested !== task.status) {
-      const isAssignee = task.assigneeId === userId;
-      if (!isAssignee) {
-        const membership = await db.projectMember.findUnique({
-          where: { projectId_userId: { projectId: task.projectId, userId } },
-        });
-        if (!membership) {
-          throw forbidden('Only the assignee or a project admin can change the status');
-        } else if (membership.role !== 'OWNER' && membership.role !== 'ADMIN') {
-          throw forbidden('Only the assignee or a project admin can change the status');
-        } else {
-          assertTransition(task.status as Status, requested);
-          nextStatus = requested;
-        }
-      } else {
-        assertTransition(task.status as Status, requested);
-        nextStatus = requested;
-      }
-    }
-  }
-
-  if (nextStatus !== null) {
-    data.status = nextStatus;
-  }
-
+  const { data, nextStatus } = await collectChanges(task, userId, body);
   if (Object.keys(data).length === 0) {
     return serializeTask(task);
   }

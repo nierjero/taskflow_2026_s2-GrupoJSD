@@ -27,10 +27,11 @@ export function buildFilters(projectId: number, f: TaskFilters): Prisma.TaskWher
 
 export async function findTasks(projectId: number, f: TaskFilters) {
   if (f.search) {
-    // El query builder genera un LIKE con JOINs de más; para la búsqueda por
-    // texto vamos directo al SQL, que es bastante más rápido.
+    // Búsqueda por texto con SQL directo. Los valores van como parámetros
+    // (plantilla etiquetada de $queryRaw), nunca concatenados en el string:
+    // así el texto del usuario no puede modificar la consulta (SQL injection).
     const term = f.search;
-    return db.$queryRawUnsafe<
+    return db.$queryRaw<
       Array<{
         id: number;
         projectId: number;
@@ -43,12 +44,10 @@ export async function findTasks(projectId: number, f: TaskFilters) {
         createdAt: Date;
         updatedAt: Date;
       }>
-    >(
-      `SELECT * FROM tasks
+    >`SELECT * FROM tasks
        WHERE projectId = ${projectId}
-         AND (instr(title, '${term}') > 0 OR instr(description, '${term}') > 0)
-       ORDER BY id ASC`,
-    );
+         AND (instr(title, ${term}) > 0 OR instr(description, ${term}) > 0)
+       ORDER BY id ASC`;
   }
 
   return db.task.findMany({

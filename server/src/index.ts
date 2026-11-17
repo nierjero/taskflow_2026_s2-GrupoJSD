@@ -1,4 +1,8 @@
 import { createApp } from './app';
+import { getJwtSecret } from './config';
+
+// Falla al arrancar (y no en el primer login) si falta JWT_SECRET en producción.
+getJwtSecret();
 
 const PORT = Number(process.env.PORT) || 3000;
 

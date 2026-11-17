@@ -7,5 +7,8 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: ['src/**/*.ts', '!src/index.ts', '!src/types/**'],
   coverageReporters: ['text', 'lcov'],
+  // Si la cobertura baja de estos mínimos, `jest --coverage` termina con error
+  // (y con él el job de cobertura del CI).
+  coverageThreshold: { global: { lines: 70, branches: 40 } },
   testTimeout: 20000,
 };
